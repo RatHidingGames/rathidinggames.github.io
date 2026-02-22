@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hide — Rat Hiding Games</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Space+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #08080a;
+      --accent: #ff6a00;
+      --text:   #e4e4ee;
+      --muted:  #3c3c50;
+      --dim:    #252535;
+    }
+
+    html, body { height: 100%; overflow: hidden; background: var(--bg); }
+    body { font-family: 'Space Mono', monospace; }
+    canvas { display: block; }
+
+    /* ── back link ── */
+    #back {
+      position: fixed;
+      top: 1.75rem;
+      left: 2rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      z-index: 30;
+      transition: color 0.2s;
+    }
+    #back:hover { color: var(--accent); }
+
+    /* ── hud ── */
+    #hud {
+      position: fixed;
+      top: 1.6rem;
+      right: 2rem;
+      text-align: right;
+      z-index: 30;
+      display: none;
+    }
+    #hud .label {
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    #hud .val {
+      font-size: 1.5rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    /* ── overlay ── */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      z-index: 20;
+      background: rgba(8, 8, 10, 0.9);
+      transition: opacity 0.35s;
+    }
+    #overlay.gone { opacity: 0; pointer-events: none; }
+
+    .o-eyes {
+      display: inline-flex;
+      gap: 18px;
+      margin-bottom: 2.5rem;
+    }
+    .o-eye {
+      width: 7px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent), 0 0 18px rgba(255,106,0,0.5);
+      animation: wink 4s ease-in-out infinite;
+    }
+    .o-eye:nth-child(2) { animation-delay: 0.08s; }
+    @keyframes wink {
+      0%, 85%, 100% { transform: scaleY(1); opacity: 1; }
+      91%           { transform: scaleY(0.06); opacity: 0.4; }
+    }
+
+    .o-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(3.5rem, 12vw, 8rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.6rem;
+    }
+    .o-sub {
+      font-size: 0.6rem;
+      letter-spacing: 0.35em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 3rem;
+    }
+    .o-rules {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      line-height: 2.4;
+      margin-bottom: 3rem;
+    }
+    .o-rules span { color: var(--text); }
+
+    .o-cta {
+      font-size: 0.65rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--accent);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    .o-score-big {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(3rem, 10vw, 6.5rem);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .o-score-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+    .o-best {
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      color: var(--dim);
+      margin-bottom: 3rem;
+    }
+    .o-best span { color: var(--muted); }
+
+    /* bonus popups */
+    .popup {
+      position: fixed;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: #e8b800;
+      pointer-events: none;
+      z-index: 25;
+      animation: popUp 1s ease-out forwards;
+    }
+    @keyframes popUp {
+      0%   { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-28px); }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="c"></canvas>
+  <a href="index.html" id="back">← back</a>
+
+  <div id="hud">
+    <div class="label">survived</div>
+    <div class="val" id="sv">0.0s</div>
+  </div>
+
+  <div id="overlay">
+    <div class="o-eyes" aria-hidden="true">
+      <div class="o-eye"></div>
+      <div class="o-eye"></div>
+    </div>
+    <div class="o-title" id="o-title" style="color:var(--accent)">HIDE</div>
+    <div class="o-sub">rat hiding games</div>
+    <div class="o-rules" id="o-rules">
+      you are the rat<br>
+      <span>avoid the light</span> — stay in the dark<br>
+      collect <span style="color:#e8b800">cheese</span> for bonus<br>
+      move mouse · tap
+    </div>
+    <div class="o-cta" id="o-cta">click or press any key to start</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx    = canvas.getContext('2d');
+    const overlay  = document.getElementById('overlay');
+    const hudEl    = document.getElementById('hud');
+    const svEl     = document.getElementById('sv');
+    const oTitle   = document.getElementById('o-title');
+    const oRules   = document.getElementById('o-rules');
+    const oCta     = document.getElementById('o-cta');
+
+    let W, H;
+    const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ── constants ────────────────────────────────────────────────────────────
+    const PLAYER_R  = 5;
+    const BASE_SPD  = 2.6;
+    const CHEESE_R  = 6;
+    const CHEESE_TTL = 7000;
+    const CHEESE_INT = 3800;
+
+    // ── game state ───────────────────────────────────────────────────────────
+    let gstate   = 'title';  // 'title' | 'playing' | 'dead'
+    let player, lights, cheeses, elapsed, startTime, lastCheese;
+    let flashAlpha = 0, canAct = true, best = 0;
+    let graceUntil = 0;   // timestamp — no collision before this
+    let pointerTarget = null; // mouse / touch follow target
+    let blinkY = 1, blinking = false, blinkPhase = 0, nextBlink = 0;
+    const keys = {};
+
+    // ── input ────────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (canAct && (gstate === 'title' || gstate === 'dead')) go();
+    });
+    document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    document.addEventListener('click', e => {
+      if (e.target.id === 'back') return;
+      if (canAct && (gstate === 'title' || gstate === 'dead')) go();
+    });
+
+    // mouse follow
+    document.addEventListener('mousemove', e => {
+      if (gstate === 'playing') pointerTarget = { x: e.clientX, y: e.clientY };
+    });
+
+    // touch follow (tap = move there)
+    document.addEventListener('touchstart', e => {
+      if (e.target.id === 'back') return;
+      pointerTarget = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      if (canAct && (gstate === 'title' || gstate === 'dead')) go();
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+      if (gstate !== 'playing') return;
+      pointerTarget = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    document.addEventListener('touchend', () => { pointerTarget = null; });
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const dist  = (ax, ay, bx, by) => Math.sqrt((ax-bx)**2 + (ay-by)**2);
+    const rand  = (lo, hi) => lo + Math.random() * (hi - lo);
+
+    function popup(x, y, txt) {
+      const el = document.createElement('div');
+      el.className = 'popup';
+      el.textContent = txt;
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }
+
+    // ── light factory ────────────────────────────────────────────────────────
+    // safe=true → starts far from screen center so player isn't insta-caught
+    function makeLight(idx, safe = false) {
+      const lr = Math.min(W, H) * 0.13;
+      const patterns = ['orbit', 'bounce', 'figure8'];
+      const type = patterns[idx % patterns.length];
+      if (type === 'orbit') return {
+        type, x: 0, y: 0,
+        cx: rand(W*0.3, W*0.7), cy: rand(H*0.3, H*0.7),
+        or: rand(H*0.18, H*0.28),
+        // safe: start angle pointing away from center
+        angle: safe ? Math.PI * (0.75 + Math.random() * 0.5) : rand(0, Math.PI*2),
+        speed: rand(0.009, 0.014) * (Math.random()>.5?1:-1),
+        r: lr,
+      };
+      if (type === 'bounce') return {
+        type,
+        // safe: spawn in a corner, not the center
+        x: safe ? (Math.random()>.5 ? rand(lr, W*0.2) : rand(W*0.8, W-lr)) : rand(lr, W-lr),
+        y: safe ? (Math.random()>.5 ? rand(lr, H*0.2) : rand(H*0.8, H-lr)) : rand(lr, H-lr),
+        vx: rand(1.2, 2.0) * (Math.random()>.5?1:-1),
+        vy: rand(0.8, 1.4) * (Math.random()>.5?1:-1),
+        r: lr * 0.92,
+      };
+      return {  // figure8 — safe: start at edge of path
+        type, x: 0, y: 0,
+        cx: W/2, cy: H/2,
+        rx: W*0.3, ry: H*0.22,
+        angle: safe ? Math.PI / 2 : rand(0, Math.PI*2),
+        speed: rand(0.007, 0.011),
+        r: lr * 1.05,
+      };
+    }
+
+    // ── game start ───────────────────────────────────────────────────────────
+    function go() {
+      gstate    = 'playing';
+      canAct    = false;
+      player    = { x: W/2, y: H/2 };
+      elapsed   = 0;
+      startTime = performance.now();
+      lastCheese = performance.now();
+      cheeses   = [];
+      flashAlpha = 0;
+      pointerTarget = null;
+      graceUntil = performance.now() + 2500; // 2.5s safe window
+      blinkY = 1; blinking = false; nextBlink = performance.now() + rand(2000, 4500);
+      lights    = [makeLight(0, true), makeLight(1, true)];
+      spawnCheese();
+
+      overlay.classList.add('gone');
+      hudEl.style.display = 'block';
+    }
+
+    function spawnCheese() {
+      const m = 80;
+      cheeses.push({ x: rand(m, W-m), y: rand(m, H-m), born: performance.now() });
+    }
+
+    // ── death ────────────────────────────────────────────────────────────────
+    function die() {
+      gstate = 'dead';
+      hudEl.style.display = 'none';
+      flashAlpha = 1;
+      const s = Math.floor(elapsed * 10) / 10;
+      if (s > best) best = s;
+
+      setTimeout(() => {
+        overlay.classList.remove('gone');
+        oTitle.textContent = 'CAUGHT.';
+        oTitle.style.color = 'var(--text)';
+        oRules.innerHTML   = `
+          <div class="o-score-big">${s}s</div>
+          <div class="o-score-label">survived</div>
+          <div class="o-best">best: <span>${best}s</span></div>
+        `;
+        oCta.textContent = 'click or press any key to try again';
+        canAct = true;
+      }, 650);
+    }
+
+    // ── update ───────────────────────────────────────────────────────────────
+    let addLightAt = 28; // seconds before next light added
+    function update(ts) {
+      if (gstate !== 'playing') return;
+
+      elapsed = (ts - startTime) / 1000;
+      const spd  = BASE_SPD + elapsed * 0.018;
+      const mult = 1 + elapsed * 0.014;
+
+      svEl.textContent = elapsed.toFixed(1) + 's';
+
+      // add light
+      if (elapsed >= addLightAt && lights.length < 5) {
+        lights.push(makeLight(lights.length));
+        addLightAt += 22;
+      }
+
+      // player movement — mouse / touch follow
+      if (pointerTarget) {
+        const dx = pointerTarget.x - player.x;
+        const dy = pointerTarget.y - player.y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d > 2) {
+          const move = Math.min(d, spd * 1.1);
+          player.x += (dx / d) * move;
+          player.y += (dy / d) * move;
+        }
+      }
+
+      player.x = clamp(player.x, PLAYER_R, W - PLAYER_R);
+      player.y = clamp(player.y, PLAYER_R, H - PLAYER_R);
+
+      const inGrace = ts < graceUntil;
+
+      // eye blink
+      if (!blinking && ts > nextBlink) { blinking = true; blinkPhase = 0; }
+      if (blinking) {
+        if (blinkPhase === 0) { blinkY = Math.max(0.05, blinkY - 0.18); if (blinkY <= 0.05) blinkPhase = 1; }
+        else                  { blinkY = Math.min(1,    blinkY + 0.18); if (blinkY >= 1) { blinking = false; nextBlink = ts + rand(1800, 5000); } }
+      }
+
+      // update lights + collision
+      for (const l of lights) {
+        if (l.type === 'orbit') {
+          l.angle += l.speed * mult;
+          l.x = l.cx + Math.cos(l.angle) * l.or;
+          l.y = l.cy + Math.sin(l.angle) * l.or;
+        } else if (l.type === 'bounce') {
+          l.x += l.vx * mult;
+          l.y += l.vy * mult;
+          if (l.x < l.r || l.x > W-l.r) l.vx *= -1;
+          if (l.y < l.r || l.y > H-l.r) l.vy *= -1;
+        } else {
+          l.angle += l.speed * mult;
+          l.x = l.cx + Math.sin(l.angle) * l.rx;
+          l.y = l.cy + Math.sin(l.angle * 2) * l.ry;
+        }
+
+        if (!inGrace && dist(player.x, player.y, l.x, l.y) < l.r - PLAYER_R * 3) {
+          die(); return;
+        }
+      }
+
+      // cheese spawn + collect
+      if (ts - lastCheese > CHEESE_INT) { spawnCheese(); lastCheese = ts; }
+      cheeses = cheeses.filter(ch => {
+        if (ts - ch.born > CHEESE_TTL) return false;
+        if (dist(player.x, player.y, ch.x, ch.y) < CHEESE_R + PLAYER_R + 4) {
+          popup(ch.x - 12, ch.y - 16, '+cheese');
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // ── draw ─────────────────────────────────────────────────────────────────
+    function draw(ts) {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#08080a';
+      ctx.fillRect(0, 0, W, H);
+
+      // death flash
+      if (flashAlpha > 0) {
+        ctx.fillStyle = `rgba(255,50,0,${flashAlpha * 0.35})`;
+        ctx.fillRect(0, 0, W, H);
+        flashAlpha = Math.max(0, flashAlpha - 0.04);
+      }
+
+      if (gstate !== 'playing') return;
+
+      // lights
+      for (const l of lights) {
+        // soft outer aura
+        const g = ctx.createRadialGradient(l.x, l.y, l.r * 0.3, l.x, l.y, l.r);
+        g.addColorStop(0,   'rgba(255,200,100,0.18)');
+        g.addColorStop(0.55,'rgba(255,150,50,0.11)');
+        g.addColorStop(1,   'rgba(255,100,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(l.x, l.y, l.r, 0, Math.PI*2);
+        ctx.fill();
+        // bright core
+        const c = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, 26);
+        c.addColorStop(0, 'rgba(255,240,180,0.6)');
+        c.addColorStop(1, 'rgba(255,200,100,0)');
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.arc(l.x, l.y, 26, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      // cheese
+      cheeses.forEach(ch => {
+        const age = (ts - ch.born) / CHEESE_TTL;
+        ctx.globalAlpha = Math.max(0.15, 1 - age * 0.75);
+        ctx.shadowColor = 'rgba(232,184,0,0.8)';
+        ctx.shadowBlur  = 12;
+        ctx.fillStyle   = '#e8b800';
+        ctx.beginPath();
+        ctx.arc(ch.x, ch.y, CHEESE_R, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur  = 0;
+      });
+
+      // grace period ring — pulses and fades out
+      if (ts < graceUntil) {
+        const gp = (graceUntil - ts) / 2500; // 1→0
+        const pulse = 18 + Math.sin(ts * 0.012) * 5;
+        ctx.strokeStyle = `rgba(255,106,0,${gp * 0.5})`;
+        ctx.lineWidth   = 1.5;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, pulse, 0, Math.PI*2);
+        ctx.stroke();
+      }
+
+      // player — two glowing rat eyes (with blink)
+      ctx.shadowColor = `rgba(255,106,0,0.9)`;
+      ctx.shadowBlur  = 20;
+      ctx.fillStyle   = '#ff6a00';
+      for (const ex of [player.x - 4, player.x + 4]) {
+        ctx.save();
+        ctx.translate(ex, player.y);
+        ctx.scale(1, blinkY);
+        ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    // ── loop ─────────────────────────────────────────────────────────────────
+    let prevTs = 0;
+    function loop(ts) {
+      if (ts - prevTs >= 14) { // ~60fps cap
+        update(ts);
+        draw(ts);
+        prevTs = ts;
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

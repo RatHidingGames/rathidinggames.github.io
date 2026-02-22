@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rat Hiding Games</title>
+  <meta name="description" content="Rat Hiding Games — indie game studio. We make games. We hide everywhere." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #08080a;
+      --text:   #e4e4ee;
+      --muted:  #3c3c50;
+      --dim:    #5a5a70;
+      --accent: #ff6a00;
+    }
+
+    html { height: 100%; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* grain texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* vignette */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 49;
+      background: radial-gradient(ellipse at 50% 42%, transparent 28%, rgba(0, 0, 0, 0.6) 100%);
+    }
+
+    /* ─── center content ─── */
+    .center {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    /* glowing eyes mark */
+    .eyes {
+      display: inline-flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 3.5rem;
+      cursor: pointer;
+      transition: gap 0.1s, transform 0.15s;
+    }
+
+    .eye {
+      width: 7px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow:
+        0 0 6px var(--accent),
+        0 0 18px rgba(255, 106, 0, 0.55),
+        0 0 36px rgba(255, 106, 0, 0.2);
+      animation: blink 5.5s ease-in-out infinite;
+    }
+    .eye:nth-child(2) { animation-delay: 0.06s; }
+
+    @keyframes blink {
+      0%, 87%, 100% { transform: scaleY(1); opacity: 1; }
+      93%           { transform: scaleY(0.06); opacity: 0.5; }
+    }
+
+    /* ─── title ─── */
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      white-space: nowrap;
+      margin-bottom: 2.5rem;
+    }
+
+    .t-rat   { color: var(--accent); }
+    .t-hide  { color: var(--text); transition: color 0.1s; }
+    .t-games {
+      color: var(--muted);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .t-games:hover { color: var(--text); }
+
+    /* separator */
+    .sep {
+      width: 28px;
+      height: 1px;
+      background: var(--muted);
+      margin: 0 auto 2rem;
+    }
+
+    /* ─── footer ─── */
+    .footer {
+      position: fixed;
+      bottom: 1.75rem;
+      left: 2rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      z-index: 20;
+    }
+
+    /* ─── peeking rats ─── */
+    .rat {
+      position: fixed;
+      bottom: 0;
+      right: 4.5rem;
+      width: 100px;
+      height: 200px;
+      z-index: 20;
+      transform: translateY(100%);
+      animation: ratPeek 8s ease-in-out infinite;
+    }
+
+.r-ear {
+      position: absolute;
+      width: 34px;
+      height: 44px;
+      border-radius: 50%;
+      top: 0;
+      background: var(--bg);
+      border: 1px solid rgba(255, 106, 0, 0.14);
+    }
+    .r-ear::after {
+      content: '';
+      position: absolute;
+      inset: 7px;
+      border-radius: 50%;
+      background: rgba(255, 106, 0, 0.05);
+    }
+    .r-ear--l { left: 3px; }
+    .r-ear--r { right: 3px; }
+
+    .r-head {
+      position: absolute;
+      width: 94px;
+      height: 82px;
+      background: var(--bg);
+      border: 1px solid rgba(255, 106, 0, 0.13);
+      border-radius: 50% 50% 44% 44%;
+      top: 28px;
+      left: 3px;
+    }
+
+    .r-eye {
+      position: absolute;
+      width: 10px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 5px var(--accent), 0 0 14px rgba(255, 106, 0, 0.6);
+      top: 24px;
+      animation: ratBlink 7s ease-in-out infinite;
+    }
+    .r-eye--l { left: 16px; }
+    .r-eye--r { right: 16px; }
+
+    .r-nose {
+      position: absolute;
+      width: 7px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255, 106, 0, 0.2);
+      top: 47px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .r-whisker {
+      position: absolute;
+      height: 1px;
+      width: 26px;
+      background: rgba(255, 106, 0, 0.14);
+      top: 44px;
+    }
+    .r-whisker--l1 { left: 2px;  transform: rotate(-6deg);  transform-origin: right; }
+    .r-whisker--l2 { left: 2px;  transform: rotate(2deg);   transform-origin: right; top: 48px; }
+    .r-whisker--r1 { right: 2px; transform: rotate(6deg);   transform-origin: left; }
+    .r-whisker--r2 { right: 2px; transform: rotate(-2deg);  transform-origin: left; top: 48px; }
+
+    .r-body {
+      position: absolute;
+      width: 86px;
+      height: 76px;
+      background: var(--bg);
+      border: 1px solid rgba(255, 106, 0, 0.07);
+      border-radius: 38% 38% 48% 48%;
+      top: 100px;
+      left: 7px;
+    }
+
+    @keyframes ratBlink {
+      0%, 88%, 100% { transform: scaleY(1); }
+      94%           { transform: scaleY(0.06); }
+    }
+
+    @keyframes ratPeek {
+      0%,  10% { transform: translateY(100%); }
+      26%      { transform: translateY(67%); }
+      40%      { transform: translateY(67%); }
+      48%      { transform: translateY(64%); }
+      58%      { transform: translateY(67%); }
+      74%      { transform: translateY(67%); }
+      86%      { transform: translateY(100%); }
+      100%     { transform: translateY(100%); }
+    }
+
+/* ─── pawprints (JS-spawned) ─── */
+    .pawprint {
+      position: fixed;
+      bottom: 6px;
+      width: 10px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 106, 0, 0.22);
+      pointer-events: none;
+      z-index: 15;
+      animation: pawFade 3.2s ease-out forwards;
+    }
+    .pawprint::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 0;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255, 106, 0, 0.22);
+      box-shadow: 7px 0 0 rgba(255, 106, 0, 0.22);
+    }
+    @keyframes pawFade {
+      0%   { opacity: 1; }
+      50%  { opacity: 0.5; }
+      100% { opacity: 0; }
+    }
+
+    /* ─── responsive ─── */
+    @media (max-width: 480px) {
+      .rat { right: 1.5rem; width: 80px; height: 160px; }
+.r-head { width: 74px; }
+      .r-ear  { width: 26px; height: 34px; }
+      .r-eye  { width: 8px; height: 10px; top: 20px; }
+      .footer { left: 1.25rem; bottom: 1.25rem; }
+    }
+
+    /* ─── reduced motion ─── */
+    @media (prefers-reduced-motion: reduce) {
+      .rat      { animation: none; transform: translateY(100%); }
+.eye, .r-eye { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ╔══════════════════════════════════════════════╗
+  ║                                              ║
+  ║   you found the rat hole.                    ║
+  ║                                              ║
+  ║    /\_/\                                     ║
+  ║   ( o.o )   try the konami code.             ║
+  ║    > ^ <                                     ║
+  ║                                              ║
+  ║   hold [C] and move your mouse.              ║
+  ║   click the eyes.                            ║
+  ║   wait long enough.                          ║
+  ║                                              ║
+  ╚══════════════════════════════════════════════╝
+-->
+
+  <main class="center">
+
+    <!-- glowing eyes — click me -->
+    <div class="eyes" aria-hidden="true">
+      <div class="eye"></div>
+      <div class="eye"></div>
+    </div>
+
+    <h1>
+      <span class="t-rat">RAT</span><span class="t-hide"> HIDING</span><a href="game.html" class="t-games"> GAMES</a>
+    </h1>
+
+  </main>
+
+  <!-- right rat -->
+  <div class="rat" aria-hidden="true">
+    <div class="r-ear r-ear--l"></div>
+    <div class="r-ear r-ear--r"></div>
+    <div class="r-head">
+      <div class="r-eye r-eye--l"></div>
+      <div class="r-eye r-eye--r"></div>
+      <div class="r-nose"></div>
+      <div class="r-whisker r-whisker--l1"></div>
+      <div class="r-whisker r-whisker--l2"></div>
+      <div class="r-whisker r-whisker--r1"></div>
+      <div class="r-whisker r-whisker--r2"></div>
+    </div>
+    <div class="r-body"></div>
+  </div>
+
+<footer class="footer">© 2026 Rat Hiding Games</footer>
+
+  <script>
+    // ─── 1. Eye tracking — eyes follow cursor ───────────────────────────────
+    const eyesEl  = document.querySelector('.eyes');
+    const hideSpan = document.querySelector('.t-hide');
+
+    document.addEventListener('mousemove', e => {
+      const mx = (e.clientX / window.innerWidth  - 0.5) * 7;
+      const my = (e.clientY / window.innerHeight - 0.5) * 4;
+      eyesEl.style.transform = `translate(${mx}px, ${my}px)`;
+    });
+
+    // ─── 2. Click eyes — wide-eyed flash ───────────────────────────────────
+    eyesEl.addEventListener('click', () => {
+      // flash overlay
+      const flash = document.createElement('div');
+      Object.assign(flash.style, {
+        position: 'fixed', inset: '0',
+        background: 'rgba(255,106,0,0.1)',
+        zIndex: '900', pointerEvents: 'none',
+        transition: 'opacity 0.5s'
+      });
+      document.body.appendChild(flash);
+
+      // widen the gap — surprised eyes
+      eyesEl.style.gap = '36px';
+      setTimeout(() => {
+        flash.style.opacity = '0';
+        eyesEl.style.gap   = '';
+        setTimeout(() => flash.remove(), 500);
+      }, 140);
+    });
+
+    // ─── 3. glitch → R4T W4TCH1NG Y0U every ~40s ──────────────────────────
+    const ratSpan   = document.querySelector('.t-rat');
+    const gamesSpan = document.querySelector('.t-games');
+
+    function flicker() {
+      const seq = [
+        ['R4T',  ' H1D1NG',   ' G4M3S'],
+        ['R@T',  ' W@TCH1NG', ' Y0U'  ],
+        ['R4T',  ' W4TCH1NG', ' Y0U'  ],
+        ['R@T',  ' W4TCH1NG', ' Y0U'  ],
+        ['R4T',  ' W4TCH1NG', ' Y0U'  ],
+        ['R@T',  ' W@TCH1NG', ' Y0U'  ],
+        ['RAT',  ' WATCHING', ' YOU'  ],
+        ['R4T',  ' W4TCH1NG', ' Y0U'  ],
+        ['RAT',  ' HIDING',   ' GAMES'],
+      ];
+      let i = 0;
+      ratSpan.style.color   = 'var(--accent)';
+      hideSpan.style.color  = 'var(--accent)';
+      gamesSpan.style.color = 'var(--accent)';
+
+      const id = setInterval(() => {
+        ratSpan.textContent   = seq[i][0];
+        hideSpan.textContent  = seq[i][1];
+        gamesSpan.textContent = seq[i][2];
+        i++;
+        if (i >= seq.length) {
+          clearInterval(id);
+          ratSpan.textContent   = 'RAT';
+          hideSpan.textContent  = ' HIDING';
+          gamesSpan.textContent = ' GAMES';
+          ratSpan.style.color   = '';
+          hideSpan.style.color  = '';
+          gamesSpan.style.color = '';
+        }
+      }, 210);
+    }
+    setInterval(flicker, 40000);
+
+    // ─── 4. Konami code → rat swarm ────────────────────────────────────────
+    const KONAMI = [
+      'ArrowUp','ArrowUp','ArrowDown','ArrowDown',
+      'ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'
+    ];
+    let ki = 0;
+    document.addEventListener('keydown', e => {
+      ki = (e.key === KONAMI[ki]) ? ki + 1 : (e.key === KONAMI[0] ? 1 : 0);
+      if (ki === KONAMI.length) { ki = 0; ratSwarm(); }
+    });
+
+    function ratSwarm() {
+      for (let i = 0; i < 22; i++) {
+        setTimeout(() => {
+          const r   = document.createElement('div');
+          const ltr = Math.random() > 0.5;
+          const y   = 10 + Math.random() * 72;
+          const spd = 1.3 + Math.random() * 1.6;
+          const sz  = 7  + Math.random() * 9;
+          Object.assign(r.style, {
+            position: 'fixed', zIndex: '950',
+            width:  sz * 1.7 + 'px',
+            height: sz + 'px',
+            background: 'rgba(255,106,0,0.8)',
+            borderRadius: '50%',
+            top: y + 'vh',
+            [ltr ? 'left' : 'right']: '-30px',
+            boxShadow: `0 0 8px rgba(255,106,0,0.5),
+              ${sz*0.35}px ${-sz*0.55}px 0 ${sz*0.22}px rgba(255,106,0,0.7),
+              ${sz*0.9}px  ${-sz*0.55}px 0 ${sz*0.22}px rgba(255,106,0,0.7)`,
+            transition: `transform ${spd}s linear`,
+            pointerEvents: 'none'
+          });
+          document.body.appendChild(r);
+          requestAnimationFrame(() => {
+            r.style.transform = `translateX(${ltr ? 115 : -115}vw)`;
+          });
+          setTimeout(() => r.remove(), spd * 1000 + 300);
+        }, i * 85);
+      }
+    }
+
+    // ─── 5. Cheese crumb trail — hold C + move mouse ───────────────────────
+    let cDown = false, lastCrumb = 0;
+    document.addEventListener('keydown', e => { if (e.key === 'c' || e.key === 'C') cDown = true;  });
+    document.addEventListener('keyup',   e => { if (e.key === 'c' || e.key === 'C') cDown = false; });
+
+    document.addEventListener('mousemove', e => {
+      if (!cDown || Date.now() - lastCrumb < 40) return;
+      lastCrumb = Date.now();
+      const c = document.createElement('div');
+      Object.assign(c.style, {
+        position: 'fixed', zIndex: '940',
+        left: e.clientX - 4 + 'px',
+        top:  e.clientY - 3 + 'px',
+        width: '7px', height: '5px',
+        background: '#e8b800',
+        borderRadius: '2px',
+        opacity: '0.9',
+        pointerEvents: 'none',
+        boxShadow: '0 0 5px rgba(232,184,0,0.6)',
+        transition: 'opacity 1s, transform 1s'
+      });
+      document.body.appendChild(c);
+      requestAnimationFrame(() => {
+        c.style.opacity   = '0';
+        c.style.transform = 'translateY(7px)';
+      });
+      setTimeout(() => c.remove(), 1050);
+    });
+
+    // ─── 6. Pawprint trail across the bottom ───────────────────────────────
+    function spawnTrail() {
+      const ltr    = Math.random() > 0.5;
+      const startX = ltr ? -20 : window.innerWidth + 20;
+      const stepW  = 36 + Math.random() * 18;
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          const p = document.createElement('div');
+          p.className = 'pawprint';
+          const side = i % 2 === 0 ? 5 : -5;
+          p.style.left = (startX + (ltr ? 1 : -1) * i * stepW + side) + 'px';
+          document.body.appendChild(p);
+          setTimeout(() => p.remove(), 3400);
+        }, i * 210);
+      }
+    }
+    setTimeout(spawnTrail, 5000);
+    setInterval(spawnTrail, 15000);
+  </script>
+
+</body>
+</html>
